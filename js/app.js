@@ -19,12 +19,16 @@
   // напоминания работают только внутри Telegram: сервер узнаёт пользователя по initData
   const remindersLive = Boolean(apiUrl && inTelegram && tg.initData);
 
+  // ?demo — сразу полный пример данных без вступления (для скриншотов и показа клиентам)
+  const demoLink = new URLSearchParams(location.search).has('demo');
+
   const state = {
     habits: store.peek('habits') || [], // { id, title, emoji, days: [1..7], remind: 'HH:MM' | '', done: ['YYYY-MM-DD'], created }
     tasks: store.peek('tasks') || [], // { id, title, date, time, remind, done, doneAt, ts }
     tab: 'habits',
     showDone: false,
     sheet: null, // { kind: 'habit' | 'task', draft } | { kind: 'reminders' }
+    intro: null, // номер экрана вступления, null — вступление закрыто
     server: remindersLive ? 'pending' : 'demo', // 'pending' | 'ok' | 'error' | 'demo'
   };
 
@@ -175,6 +179,20 @@
 
   // ---------- Пример данных ----------
 
+  // для нового пользователя — пара подсказок вместо чужих дел
+  function starterData() {
+    const today = todayIso();
+    const task = (title, i) => ({ id: newId() + i, title, date: today, time: '', remind: false, done: false, doneAt: 0, ts: Date.now() + i });
+    return {
+      habits: [{ id: newId(), title: 'Выпить стакан воды', emoji: '💧', days: [1, 2, 3, 4, 5, 6, 7], remind: '', done: [], created: today }],
+      tasks: [
+        task('Отметь меня выполненной — нажми на кружок слева', 0),
+        task('Нажми на эту задачу, чтобы изменить срок или удалить её', 1),
+      ],
+    };
+  }
+
+  // полный пример с историей — для показа и скриншотов (?demo или кнопка «Заполнить примером»)
   function demoData() {
     let seed = 7;
     const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
@@ -250,8 +268,11 @@
 
   function updateChrome() {
     if (tgCan('6.1')) {
-      if (state.sheet) tg.BackButton.show();
+      if (state.sheet || state.intro > 0) tg.BackButton.show();
       else tg.BackButton.hide();
+    }
+    if (state.intro !== null) {
+      return setMainButton(state.intro === INTRO.length - 1 ? 'Начать' : 'Далее', () => showIntro(state.intro + 1));
     }
     if (state.sheet) return setMainButton(null);
     if (state.tab === 'habits') setMainButton('Новая привычка', () => openHabit(null));
@@ -270,7 +291,75 @@
     tg.expand();
     tg.MainButton.setParams({ color: app.accent, text_color: '#ffffff' });
     tg.MainButton.onClick(() => mainAction && mainAction());
-    if (tgCan('6.1')) tg.BackButton.onClick(closeSheet);
+    if (tgCan('6.1')) tg.BackButton.onClick(goBack);
+  }
+
+  function goBack() {
+    if (state.sheet) return closeSheet();
+    if (state.intro > 0) showIntro(state.intro - 1);
+  }
+
+  // ---------- Вступление для нового пользователя ----------
+
+  const checkIcon = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const INTRO = [
+    {
+      icon: app.logo,
+      title: `Привет! Это ${app.name}`,
+      text: 'Трекер привычек и задач прямо в Telegram. Всё, что ты добавишь, видишь только ты — данные хранятся в твоём аккаунте.',
+    },
+    {
+      icon: '🔥',
+      title: 'Привычки',
+      text: 'Выбери дни недели и отмечай выполнение галочкой. Чем длиннее серия дней подряд — тем крепче привычка.',
+      demo: `<div class="intro-demo"><div class="habit is-done">
+        <span class="habit__emoji">💧</span>
+        <div class="habit__info"><div class="habit__title">Выпить стакан воды</div><div class="habit__meta">🔥 5 дней подряд</div></div>
+        <span class="check is-done">${checkIcon}</span>
+      </div></div>`,
+    },
+    {
+      icon: '📝',
+      title: 'Задачи',
+      text: 'Добавляй дела одной строкой, ставь дату и время. Просроченное подсветится красным, сделанное уйдёт в «Выполненные».',
+      demo: `<div class="intro-demo">
+        <div class="task"><span class="task__check"></span><div class="task__info"><div class="task__title">Позвонить в банк</div><div class="task__meta">12:00 · 🔔</div></div></div>
+        <div class="task is-done"><span class="task__check">${checkIcon}</span><div class="task__info"><div class="task__title">Купить продукты</div></div></div>
+      </div>`,
+    },
+    {
+      icon: '🔔',
+      title: 'Напоминания',
+      text: 'Включи напоминание в привычке или задаче — бот напишет тебе в Telegram в нужное время, даже если приложение закрыто.',
+      demo: `<div class="intro-demo intro-demo--chat"><div class="bubble">⏰ Пора: 💧 Выпить стакан воды<small>10:00</small></div></div>`,
+    },
+  ];
+
+  function showIntro(index) {
+    if (index >= INTRO.length) return closeIntro();
+    const back = state.intro !== null && index < state.intro;
+    state.intro = index;
+    const s = INTRO[index];
+    const el = $('intro');
+    el.hidden = false;
+    $('introSlide').innerHTML = `
+      <div class="intro__slide${back ? ' is-back' : ''}">
+        <div class="intro__icon">${s.icon}</div>
+        <h2 class="intro__title">${esc(s.title)}</h2>
+        <p class="intro__text">${esc(s.text)}</p>
+        ${s.demo || ''}
+      </div>`;
+    $('introDots').innerHTML = INTRO.map((_, i) => `<i class="${i === index ? 'is-active' : ''}"></i>`).join('');
+    $('introSkip').hidden = index === INTRO.length - 1;
+    haptic('light');
+    updateChrome();
+  }
+
+  function closeIntro() {
+    state.intro = null;
+    $('intro').hidden = true;
+    window.scrollTo(0, 0);
+    render();
   }
 
   // ---------- Отрисовка ----------
@@ -542,6 +631,7 @@
       <div class="status ${status[0]}"><b>${status[1]}</b><p>${status[2]}</p></div>
       ${list.length ? `<ul class="reminders">${rows}</ul>` : '<p class="sheet__note">Напоминаний пока нет. Включите их в привычке или задаче.</p>'}
       <div class="sheet__actions">
+        <button type="button" class="secondary-btn" data-sheet="intro">Как пользоваться</button>
         <button type="button" class="secondary-btn" data-sheet="demo">Заполнить примером</button>
         <button type="button" class="secondary-btn secondary-btn--danger" data-sheet="clear">Удалить все данные</button>
       </div>`;
@@ -591,6 +681,10 @@
   async function sheetAction(action) {
     const s = state.sheet;
     if (action === 'save') return saveDraft();
+    if (action === 'intro') {
+      closeSheet();
+      return showIntro(0);
+    }
     if (action === 'delete') {
       const isHabit = s.kind === 'habit';
       if (!(await confirmAsk(isHabit ? 'Удалить привычку вместе с историей?' : 'Удалить задачу?'))) return;
@@ -728,8 +822,28 @@
 
     $('remindersBtn').addEventListener('click', () => openSheet({ kind: 'reminders' }));
     $('mainBtn').addEventListener('click', () => mainAction && mainAction());
+    $('introSkip').addEventListener('click', closeIntro);
+    $('introDots').addEventListener('click', (e) => {
+      const dot = e.target.closest('i');
+      if (dot) showIntro([...$('introDots').children].indexOf(dot));
+    });
+
+    // листание вступления свайпом
+    let touchX = null;
+    $('intro').addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; }, { passive: true });
+    $('intro').addEventListener('touchend', (e) => {
+      if (touchX === null) return;
+      const dx = e.changedTouches[0].clientX - touchX;
+      touchX = null;
+      if (dx < -50) showIntro(state.intro + 1);
+      else if (dx > 50 && state.intro > 0) showIntro(state.intro - 1);
+    });
+
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeSheet();
+      if (state.intro === null || state.sheet) return;
+      if (e.key === 'ArrowRight') showIntro(state.intro + 1);
+      if (e.key === 'ArrowLeft' && state.intro > 0) showIntro(state.intro - 1);
     });
   }
 
@@ -745,13 +859,14 @@
     bindEvents();
     render();
 
-    // подтягиваем данные из облака Telegram; при самом первом запуске — пример
+    // подтягиваем данные из облака Telegram; при самом первом запуске — вступление и пара подсказок
     try {
       const [habits, tasks] = await Promise.all([store.load('habits'), store.load('tasks')]);
       if (!habits && !tasks) {
-        Object.assign(state, demoData());
+        Object.assign(state, demoLink ? demoData() : starterData());
         store.save('habits', state.habits);
         store.save('tasks', state.tasks);
+        if (!demoLink) showIntro(0);
       } else {
         state.habits = habits || [];
         state.tasks = tasks || [];

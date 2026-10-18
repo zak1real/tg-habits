@@ -273,6 +273,54 @@ body.has-bottom-bar .app { padding-bottom: 96px; }
 }
 .main-btn { display: block; width: 100%; max-width: 528px; margin: 0 auto; }
 
+/* Вступление (под нижней кнопкой браузера, над шапкой) */
+.intro {
+  position: fixed; inset: 0; z-index: 15;
+  display: flex; flex-direction: column;
+  padding: 12px 24px calc(24px + env(safe-area-inset-bottom));
+  background: var(--bg); overflow-y: auto;
+}
+body.has-bottom-bar .intro { padding-bottom: 96px; }
+.intro__skip { align-self: flex-end; padding: 8px 4px; color: var(--hint); font-size: 15px; }
+.intro__body { flex: 1; display: flex; align-items: center; justify-content: center; }
+.intro__slide {
+  width: 100%; max-width: 380px; text-align: center;
+  animation: slide-in .3s ease-out;
+}
+.intro__slide.is-back { animation-name: slide-back; }
+@keyframes slide-in { from { opacity: 0; transform: translateX(32px); } }
+@keyframes slide-back { from { opacity: 0; transform: translateX(-32px); } }
+.intro__icon {
+  width: 112px; height: 112px; margin: 0 auto 24px; border-radius: 34px;
+  display: grid; place-items: center; font-size: 56px;
+  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #ff7eb3));
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.intro__title { font-size: 26px; font-weight: 800; margin-bottom: 10px; }
+.intro__text { font-size: 16px; line-height: 1.5; color: var(--hint); }
+.intro__dots { display: flex; justify-content: center; gap: 8px; padding: 20px 0 8px; }
+.intro__dots i {
+  width: 8px; height: 8px; border-radius: 4px; background: var(--surface); cursor: pointer;
+  transition: width .25s, background .25s;
+}
+.intro__dots i.is-active { width: 24px; background: var(--accent); }
+
+.intro-demo {
+  margin-top: 24px; padding: 4px 14px; border-radius: var(--radius);
+  background: var(--surface); text-align: left; pointer-events: none;
+}
+.intro-demo .habit, .intro-demo .task { border-bottom-color: var(--bg); }
+.intro-demo > :last-child { border-bottom: 0; }
+.intro-demo .habit__emoji { background: var(--bg); }
+.intro-demo .check { width: 40px; height: 40px; }
+.intro-demo--chat { padding: 14px; }
+.bubble {
+  display: inline-block; max-width: 85%; padding: 8px 12px 6px; border-radius: 16px 16px 16px 4px;
+  background: var(--bg); box-shadow: 0 1px 2px rgba(0, 0, 0, .12);
+}
+.bubble small { display: block; margin-top: 2px; font-size: 11px; color: var(--hint); text-align: right; }
+
 /* Шторка снизу */
 .sheet { position: fixed; inset: 0; z-index: 50; }
 .sheet__backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, .45); opacity: 0; transition: opacity .25s; }
