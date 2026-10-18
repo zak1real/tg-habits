@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Привычки и задачи</title>
+  <!-- SDK Telegram Mini Apps: тема, кнопки, облачное хранилище -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand__logo" id="appLogo"></div>
+        <div class="brand__text">
+          <h1 id="appName"></h1>
+          <p id="greeting"></p>
+        </div>
+      </div>
+      <button class="icon-btn" id="remindersBtn" type="button" aria-label="Напоминания">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 20.5a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span class="icon-btn__dot" id="remindersDot" hidden></span>
+      </button>
+    </header>
+
+    <div class="tabs">
+      <div class="segmented" id="tabs">
+        <button type="button" data-tab="habits">Привычки <span class="count" id="habitsCount"></span></button>
+        <button type="button" data-tab="tasks">Задачи <span class="count" id="tasksCount"></span></button>
+      </div>
+    </div>
+
+    <main>
+      <!-- Привычки -->
+      <section class="view" id="view-habits">
+        <div class="today" id="today"></div>
+        <div id="habitList"></div>
+      </section>
+
+      <!-- Задачи -->
+      <section class="view" id="view-tasks" hidden>
+        <form class="quick-add" id="quickAdd" autocomplete="off">
+          <input id="quickInput" maxlength="120" placeholder="Новая задача на сегодня…" enterkeyhint="done">
+          <button type="submit" aria-label="Добавить">+</button>
+        </form>
+        <div id="taskList"></div>
+      </section>
+    </main>
+
+    <!-- Кнопка внизу для обычного браузера. В Telegram вместо неё — нативная MainButton -->
+    <div class="bottom-bar" id="bottomBar" hidden>
+      <button class="main-btn" id="mainBtn" type="button"></button>
+    </div>
+  </div>
+
+  <!-- Шторка: привычка, задача, напоминания -->
+  <div class="sheet" id="sheet" hidden>
+    <div class="sheet__backdrop" data-close></div>
+    <div class="sheet__panel">
+      <div class="sheet__handle" data-close></div>
+      <div id="sheetBody"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
