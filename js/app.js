@@ -755,6 +755,12 @@
       } else {
         state.habits = habits || [];
         state.tasks = tasks || [];
+        // в старой версии примера задача называлась иначе — обновляем у тех, кто уже открывал приложение
+        const oldDemo = state.tasks.find((t) => t.title === 'Ответить Ане про выходные');
+        if (oldDemo) {
+          oldDemo.title = 'Ответить друзьям про выходные';
+          saveTasks();
+        }
       }
     } catch (e) {
       toast('Не удалось загрузить данные из облака');
